@@ -5,6 +5,7 @@ import numpy as np
 import time
 import importlib.util
 
+from ledetector.detector.model import ObjectDetector
 from ledetector.detector.stream import VideoStream
 
 
@@ -25,89 +26,17 @@ parser.add_argument('--edgetpu', help='Use Coral Edge TPU Accelerator to speed u
 
 args = parser.parse_args()
 
-MODEL_NAME = args.modeldir
-GRAPH_NAME = args.graph
-LABELMAP_NAME = args.labels
-min_conf_threshold = float(args.threshold)
-resW, resH = args.resolution.split('x')
-imW, imH = int(resW), int(resH)
-use_TPU = args.edgetpu
+od = ObjectDetector(model_dir=args.modeldir)
 
-# Import TensorFlow libraries
-# If tflite_runtime is installed, import interpreter from tflite_runtime, else import from regular tensorflow
-# If using Coral Edge TPU, import the load_delegate library
-pkg = importlib.util.find_spec('tflite_runtime')
-if pkg:
-    from tflite_runtime.interpreter import Interpreter
-    if use_TPU:
-        from tflite_runtime.interpreter import load_delegate
-else:
-    from tensorflow.lite.python.interpreter import Interpreter
-    if use_TPU:
-        from tensorflow.lite.python.interpreter import load_delegate
-
-# If using Edge TPU, assign filename for Edge TPU model
-if use_TPU:
-    # If user has specified the name of the .tflite file, use that name, otherwise use default 'edgetpu.tflite'
-    if (GRAPH_NAME == 'detect.tflite'):
-        GRAPH_NAME = 'edgetpu.tflite'       
-
-# Get path to current working directory
-CWD_PATH = os.getcwd()
-
-# Path to .tflite file, which contains the model that is used for object detection
-PATH_TO_CKPT = os.path.join(CWD_PATH,MODEL_NAME,GRAPH_NAME)
-
-# Path to label map file
-PATH_TO_LABELS = os.path.join(CWD_PATH,MODEL_NAME,LABELMAP_NAME)
-
-# Load the label map
-with open(PATH_TO_LABELS, 'r') as f:
-    labels = [line.strip() for line in f.readlines()]
-
-# Have to do a weird fix for label map if using the COCO "starter model" from
-# https://www.tensorflow.org/lite/models/object_detection/overview
-# First label is '???', which has to be removed.
-if labels[0] == '???':
-    del(labels[0])
-
-# Load the Tensorflow Lite model.
-# If using Edge TPU, use special load_delegate argument
-if use_TPU:
-    interpreter = Interpreter(model_path=PATH_TO_CKPT,
-                              experimental_delegates=[load_delegate('libedgetpu.so.1.0')])
-    print(PATH_TO_CKPT)
-else:
-    interpreter = Interpreter(model_path=PATH_TO_CKPT)
-
-interpreter.allocate_tensors()
-
-# Get model details
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
-height = input_details[0]['shape'][1]
-width = input_details[0]['shape'][2]
-
-floating_model = (input_details[0]['dtype'] == np.float32)
-
-input_mean = 127.5
-input_std = 127.5
-
-# Check output layer name to determine if this model was created with TF2 or TF1,
-# because outputs are ordered differently for TF2 and TF1 models
-outname = output_details[0]['name']
-
-if ('StatefulPartitionedCall' in outname): # This is a TF2 model
-    boxes_idx, classes_idx, scores_idx = 1, 3, 0
-else: # This is a TF1 model
-    boxes_idx, classes_idx, scores_idx = 0, 1, 2
+imW=640
+imH=480
 
 # Initialize frame rate calculation
 frame_rate_calc = 1
 freq = cv2.getTickFrequency()
 
 # Initialize video stream
-videostream = VideoStream(resolution=(imW,imH),framerate=30).start()
+videostream = VideoStream(resolution=(640,480),framerate=30).start()
 time.sleep(1)
 
 #for frame1 in camera.capture_continuous(rawCapture, format="bgr",use_video_port=True):
@@ -122,25 +51,25 @@ while True:
     # Acquire frame and resize to expected shape [1xHxWx3]
     frame = frame1.copy()
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    frame_resized = cv2.resize(frame_rgb, (width, height))
+    frame_resized = cv2.resize(frame_rgb, (od.width, od.height))
     input_data = np.expand_dims(frame_resized, axis=0)
 
     # Normalize pixel values if using a floating model (i.e. if model is non-quantized)
-    if floating_model:
-        input_data = (np.float32(input_data) - input_mean) / input_std
+    if od.floating_model:
+        input_data = (np.float32(input_data) - od.input_mean) / od.input_std
 
     # Perform the actual detection by running the model with the image as input
-    interpreter.set_tensor(input_details[0]['index'],input_data)
-    interpreter.invoke()
+    od.interpreter.set_tensor(od.input_details[0]['index'],input_data)
+    od.interpreter.invoke()
 
     # Retrieve detection results
-    boxes = interpreter.get_tensor(output_details[boxes_idx]['index'])[0] # Bounding box coordinates of detected objects
-    classes = interpreter.get_tensor(output_details[classes_idx]['index'])[0] # Class index of detected objects
-    scores = interpreter.get_tensor(output_details[scores_idx]['index'])[0] # Confidence of detected objects
+    boxes = od.interpreter.get_tensor(od.output_details[od.indices["boxes_idx"]]['index'])[0] # Bounding box coordinates of detected objects
+    classes = od.interpreter.get_tensor(od.output_details[od.indices["classes_idx"]]['index'])[0] # Class index of detected objects
+    scores = od.interpreter.get_tensor(od.output_details[od.indices["scores_idx"]]['index'])[0] # Confidence of detected objects
 
     # Loop over all detections and draw detection box if confidence is above minimum threshold
     for i in range(len(scores)):
-        if ((scores[i] > min_conf_threshold) and (scores[i] <= 1.0)):
+        if ((scores[i] > od.threshold) and (scores[i] <= 1.0)):
 
             # Get bounding box coordinates and draw box
             # Interpreter can return coordinates that are outside of image dimensions, need to force them to be within image using max() and min()
@@ -148,11 +77,11 @@ while True:
             xmin = int(max(1,(boxes[i][1] * imW)))
             ymax = int(min(imH,(boxes[i][2] * imH)))
             xmax = int(min(imW,(boxes[i][3] * imW)))
-            
+
             cv2.rectangle(frame, (xmin,ymin), (xmax,ymax), (10, 255, 0), 2)
 
             # Draw label
-            object_name = labels[int(classes[i])] # Look up object name from "labels" array using class index
+            object_name = od.labels[int(classes[i])] # Look up object name from "labels" array using class index
             label = '%s: %d%%' % (object_name, int(scores[i]*100)) # Example: 'person: 72%'
             labelSize, baseLine = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2) # Get font size
             label_ymin = max(ymin, labelSize[1] + 10) # Make sure not to draw label too close to top of window
