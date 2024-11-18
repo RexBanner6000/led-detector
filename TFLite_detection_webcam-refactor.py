@@ -50,7 +50,7 @@ while True:
 
     # Acquire frame and resize to expected shape [1xHxWx3]
     input_data = od.process_input_image(frame1)
-    boxes, classes, scores = od.get_results(input_data)
+    boxes, classes, scores = od.get_filtered_results(input_data)
 
     # Loop over all detections and draw detection box if confidence is above minimum threshold
     for i in range(len(scores)):
