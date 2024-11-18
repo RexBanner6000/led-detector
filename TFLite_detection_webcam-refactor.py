@@ -5,6 +5,7 @@ import cv2
 
 from ledetector.detector.model import ObjectDetector
 from ledetector.detector.stream import VideoStream
+from ledetector.leds.matrix import LEDMatrix
 
 # Define and parse input arguments
 parser = argparse.ArgumentParser()
@@ -52,6 +53,8 @@ freq = cv2.getTickFrequency()
 videostream = VideoStream(resolution=(640, 480), framerate=30).start()
 time.sleep(1)
 
+matrix = LEDMatrix(3)
+
 while True:
     # Start timer (for calculating frame rate)
     t1 = cv2.getTickCount()
@@ -63,6 +66,8 @@ while True:
     # Acquire frame and resize to expected shape [1xHxWx3]
     input_data = od.process_input_image(frame1)
     boxes, classes, scores = od.get_filtered_results(input_data)
+
+    matrix.flash_green(len(boxes) > 0)
 
     # Loop over all detections and draw detection box if confidence is above minimum threshold
     for i in range(len(scores)):
