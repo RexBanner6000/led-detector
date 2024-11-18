@@ -1,4 +1,4 @@
-import importlib.util
+import cv2
 from pathlib import Path
 from tflite_runtime.interpreter import Interpreter
 from typing import Any, Dict, List, Tuple
@@ -57,6 +57,14 @@ class ObjectDetector:
             "classes_idx": classes_idx,
             "scores_idx": scores_idx,
         }
+
+    def process_input_image(self, frame: np.ndarray) -> np.ndarray:
+        frame_copy = frame.copy()
+        frame_rgb = cv2.cvtColor(frame_copy, cv2.COLOR_BGR2RGB)
+        frame_resized = cv2.resize(frame_rgb, (self.width, self.height))
+        if self.floating_model:
+            frame_resized = (np.float32(frame_resized) - od.input_mean) / od.input_std
+        return np.expand_dims(frame_resized, axis=0)
 
 
 if __name__ == "__main__":

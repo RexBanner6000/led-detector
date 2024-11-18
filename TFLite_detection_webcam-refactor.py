@@ -49,17 +49,10 @@ while True:
     frame1 = videostream.read()
 
     # Acquire frame and resize to expected shape [1xHxWx3]
-    frame = frame1.copy()
-    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    frame_resized = cv2.resize(frame_rgb, (od.width, od.height))
-    input_data = np.expand_dims(frame_resized, axis=0)
-
-    # Normalize pixel values if using a floating model (i.e. if model is non-quantized)
-    if od.floating_model:
-        input_data = (np.float32(input_data) - od.input_mean) / od.input_std
+    input_data = od.process_input_image(frame1)
 
     # Perform the actual detection by running the model with the image as input
-    od.interpreter.set_tensor(od.input_details[0]['index'],input_data)
+    od.interpreter.set_tensor(od.input_details[0]['index'], input_data)
     od.interpreter.invoke()
 
     # Retrieve detection results
