@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Tuple
 
 import cv2
 import numpy as np
-from tflite_runtime.interpreter import Interpreter
+# from tflite_runtime.interpreter import Interpreter
 
 
 class ObjectDetector:
@@ -19,11 +19,12 @@ class ObjectDetector:
         self.model_dir = Path(model_dir)
         self.graph_path = self.model_dir / graph_name
         self.labels_path = self.model_dir / label_map_name
-        self.interpreter = Interpreter(model_path=str(self.graph_path))
+        # self.interpreter = Interpreter(model_path=str(self.graph_path))
         self.threshold = threshold
         self.img_width = resolution[0]
         self.img_height = resolution[1]
         self.labels = self.get_labels()
+        self.valid_classes = self.get_allowed_class_ids(object_list)
 
         self.input_details = self.interpreter.get_input_details()
         self.output_details = self.interpreter.get_output_details()
@@ -46,6 +47,12 @@ class ObjectDetector:
         if labels[0] == "???":
             del labels[0]
         return labels
+
+    def get_allowed_class_ids(self, class_names: List[str]) -> List[int]:
+        allowed_ids = []
+        for class_name in class_names:
+            allowed_ids.append(self.labels.index(class_name))
+        return allowed_ids
 
     def get_indices(self) -> Dict[str, int]:
         if "StatefulPartitionedCall" in self.outname:  # This is a TF2 model
@@ -90,7 +97,7 @@ class ObjectDetector:
         filtered_scores = []
 
         for i in range(len(boxes)):
-            if (scores[i] > od.threshold) and (scores[i] <= 1.0):
+            if (scores[i] > od.threshold) and (scores[i] <= 1.0) and (classes[i] in self.valid_classes):
                 filtered_boxes.append(boxes[i])
                 filtered_classes.append(classes[i])
                 filtered_scores.append(scores[i])
@@ -99,4 +106,4 @@ class ObjectDetector:
 
 
 if __name__ == "__main__":
-    od = ObjectDetector(model_dir="./TFLite_model")
+    od = ObjectDetector(model_dir="S:\projects\github\led-detector\TFLite_model")
