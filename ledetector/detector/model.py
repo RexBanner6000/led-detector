@@ -14,6 +14,7 @@ class ObjectDetector:
         label_map_name: str = "labelmap.txt",
         threshold: float = 0.5,
         resolution: Tuple[int] = (640, 480),
+        object_list: List[str] = ["person", "dog", "cat"]
     ) -> None:
         self.model_dir = Path(model_dir)
         self.graph_path = self.model_dir / graph_name
@@ -81,6 +82,20 @@ class ObjectDetector:
         )[0]
 
         return boxes, classes, scores
+
+    def get_filtered_results(self, input_data: np.ndarray):
+        boxes, classes, scores = self.get_results(input_data)
+        filtered_boxes = []
+        filtered_classes = []
+        filtered_scores = []
+
+        for i in range(len(boxes)):
+            if (scores[i] > od.threshold) and (scores[i] <= 1.0):
+                filtered_boxes.append(boxes[i])
+                filtered_classes.append(classes[i])
+                filtered_scores.append(scores[i])
+
+        return filtered_boxes, filtered_classes, filtered_scores
 
 
 if __name__ == "__main__":
