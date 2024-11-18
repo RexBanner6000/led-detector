@@ -27,6 +27,8 @@ class VideoStream:
 
     def read(self):
         self.frame = cv2.rotate(self.frame, cv2.ROTATE_180)
+        self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+        self.frame = cv2.cvtColor(self.frame, cv2.COLOR_GRAY2RGB)
         return self.frame
 
     def stop(self):
