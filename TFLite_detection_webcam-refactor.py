@@ -36,10 +36,9 @@ frame_rate_calc = 1
 freq = cv2.getTickFrequency()
 
 # Initialize video stream
-videostream = VideoStream(resolution=(640,480),framerate=30).start()
+videostream = VideoStream(resolution=(640, 480), framerate=30).start()
 time.sleep(1)
 
-#for frame1 in camera.capture_continuous(rawCapture, format="bgr",use_video_port=True):
 while True:
 
     # Start timer (for calculating frame rate)
@@ -47,18 +46,11 @@ while True:
 
     # Grab frame from video stream
     frame1 = videostream.read()
+    frame = frame1.copy()
 
     # Acquire frame and resize to expected shape [1xHxWx3]
     input_data = od.process_input_image(frame1)
-
-    # Perform the actual detection by running the model with the image as input
-    od.interpreter.set_tensor(od.input_details[0]['index'], input_data)
-    od.interpreter.invoke()
-
-    # Retrieve detection results
-    boxes = od.interpreter.get_tensor(od.output_details[od.indices["boxes_idx"]]['index'])[0] # Bounding box coordinates of detected objects
-    classes = od.interpreter.get_tensor(od.output_details[od.indices["classes_idx"]]['index'])[0] # Class index of detected objects
-    scores = od.interpreter.get_tensor(od.output_details[od.indices["scores_idx"]]['index'])[0] # Confidence of detected objects
+    boxes, classes, scores = od.get_results(input_data)
 
     # Loop over all detections and draw detection box if confidence is above minimum threshold
     for i in range(len(scores)):

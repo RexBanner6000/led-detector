@@ -1,9 +1,9 @@
-import cv2
 from pathlib import Path
-from tflite_runtime.interpreter import Interpreter
 from typing import Any, Dict, List, Tuple
 
+import cv2
 import numpy as np
+from tflite_runtime.interpreter import Interpreter
 
 
 class ObjectDetector:
@@ -28,7 +28,7 @@ class ObjectDetector:
         self.output_details = self.interpreter.get_output_details()
         self.height = self.input_details[0]["shape"][1]
         self.width = self.input_details[0]["shape"][2]
-        self.floating_model = (self.input_details[0]["dtype"] == np.float32)
+        self.floating_model = self.input_details[0]["dtype"] == np.float32
         self.outname = self.output_details[0]["name"]
 
         self.input_mean = 127.5
@@ -65,6 +65,22 @@ class ObjectDetector:
         if self.floating_model:
             frame_resized = (np.float32(frame_resized) - od.input_mean) / od.input_std
         return np.expand_dims(frame_resized, axis=0)
+
+    def get_results(self, input_data: np.ndarray):
+        self.interpreter.set_tensor(self.input_details[0]["index"], input_data)
+        self.interpreter.invoke()
+
+        boxes = self.interpreter.get_tensor(
+            od.output_details[od.indices["boxes_idx"]]["index"]
+        )[0]
+        classes = self.interpreter.get_tensor(
+            od.output_details[od.indices["classes_idx"]]["index"]
+        )[0]
+        scores = self.interpreter.get_tensor(
+            od.output_details[od.indices["scores_idx"]]["index"]
+        )[0]
+
+        return boxes, classes, scores
 
 
 if __name__ == "__main__":
