@@ -39,6 +39,12 @@ parser.add_argument(
     default=32,
     type=int
 )
+parser.add_argument(
+    "--sleep",
+    help="Time in seconds to sleep between detections",
+    default=0,
+    type=float
+)
 
 args = parser.parse_args()
 
@@ -69,6 +75,5 @@ while True:
     if len(boxes) > 0:
         x = (boxes[0][1] + boxes[0][3]) / 2.0
         print(f"X: {x:.3f}", end="\r")
-
     matrix.display_detection(x)
-
+    time.sleep(args.sleep)
