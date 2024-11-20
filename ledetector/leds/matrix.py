@@ -1,6 +1,7 @@
+from typing import Union
+
 import board
 import neopixel
-from typing import Union
 
 
 class LEDMatrix:
@@ -17,7 +18,6 @@ class LEDMatrix:
 
     def turn_off(self):
         self.pixels.fill((0, 0, 0))
-
 
     def display_detection(self, x: Union[float, None]):
         if x is None:
