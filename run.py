@@ -58,9 +58,6 @@ time.sleep(1)
 matrix = LEDMatrix(args.n_leds)
 
 while True:
-    # Start timer (for calculating frame rate)
-    t1 = cv2.getTickCount()
-
     # Grab frame from video stream
     frame1 = videostream.read()
     frame = frame1.copy()
@@ -75,13 +72,3 @@ while True:
 
     matrix.display_detection(x)
 
-    # Calculate framerate
-    t2 = cv2.getTickCount()
-    time1 = (t2 - t1) / freq
-    frame_rate_calc = 1 / time1
-
-    # print(f"FPS: {frame_rate_calc:.2f}", end="\r")
-
-# Clean up
-cv2.destroyAllWindows()
-videostream.stop()
