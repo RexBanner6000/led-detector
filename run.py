@@ -25,12 +25,19 @@ parser.add_argument(
 parser.add_argument(
     "--threshold",
     help="Minimum confidence threshold for displaying detected objects",
+    type=float,
     default=0.5,
 )
 parser.add_argument(
     "--edgetpu",
     help="Use Coral Edge TPU Accelerator to speed up detection",
     action="store_true",
+)
+parser.add_argument(
+    "--n_leds",
+    help="Number of leds",
+    default=32,
+    type=int
 )
 
 args = parser.parse_args()
@@ -48,7 +55,7 @@ freq = cv2.getTickFrequency()
 videostream = VideoStream(resolution=(640, 480), framerate=30).start()
 time.sleep(1)
 
-matrix = LEDMatrix(3)
+matrix = LEDMatrix(args.n_leds)
 
 while True:
     # Start timer (for calculating frame rate)
@@ -61,22 +68,19 @@ while True:
     # Acquire frame and resize to expected shape [1xHxWx3]
     input_data = od.process_input_image(frame1)
     boxes, classes, scores = od.get_filtered_results(input_data)
-
-    matrix.flash_green(len(boxes) > 0)
-
+    x = None
     if len(boxes) > 0:
-        x = (boxes[1] + boxes[3]) / 2.0
+        x = (boxes[0][1] + boxes[0][3]) / 2.0
+        print(f"X: {x:.3f}", end="\r")
+
+    matrix.display_detection(x)
 
     # Calculate framerate
     t2 = cv2.getTickCount()
     time1 = (t2 - t1) / freq
     frame_rate_calc = 1 / time1
 
-    # Press 'q' to quit
-    if cv2.waitKey(1) == ord("q"):
-        break
-
-    print(f"FPS: {frame_rate_calc:.2f}", end="\r")
+    # print(f"FPS: {frame_rate_calc:.2f}", end="\r")
 
 # Clean up
 cv2.destroyAllWindows()
