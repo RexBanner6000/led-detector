@@ -16,6 +16,7 @@ tqdm = "^4.67.0"
 lxml = "^5.3.0"
 PyQt5 = "=5.15.2"   
 pre-commit = "^4.0.1"
+adafruit-circuitpython-led-animation = "^2.9.3"
 
 [build-system]
 requires = ["poetry-core"]
@@ -23,3 +24,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.extras]
 tflite = ["tflite-runtime"]
+rpi_ws281x = ["rpi_ws281x"]
