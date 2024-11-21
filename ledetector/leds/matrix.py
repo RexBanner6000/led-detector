@@ -38,7 +38,7 @@ class LEDMatrix:
     def display_detection(self, x: Union[float, None]):
         for i in range(0, self.strip.numPixels(), 3):
             if i == x:
-                self.strip.setPixelColor(i, 128, 128, 128)
+                self.strip.setPixelColorRGB(i, 128, 128, 128)
             else:
-                self.strip.setPixelColor(i, 0, 0, 0)
+                self.strip.setPixelColorRGB(i, 0, 0, 0)
         self.strip.show()
