@@ -3,11 +3,10 @@ from rpi_ws281x import PixelStrip
 
 import board
 import neopixel
+import time
 
 # LED strip configuration:
-LED_COUNT = 16        # Number of LED pixels.
 LED_PIN = 18          # GPIO pin connected to the pixels (18 uses PWM!).
-# LED_PIN = 10        # GPIO pin connected to the pixels (10 uses SPI /dev/spidev0.0).
 LED_FREQ_HZ = 800000  # LED signal frequency in hertz (usually 800khz)
 LED_DMA = 10          # DMA channel to use for generating signal (try 10)
 LED_BRIGHTNESS = 255  # Set to 0 for darkest and 255 for brightest
@@ -22,7 +21,7 @@ class LEDMatrix:
         self.n_leds = n_leds
         self.pixels = neopixel.NeoPixel(self.gpio, self.n_leds)
         self.strip = PixelStrip(
-            LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL
+            self.n_leds, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL
         )
         self.strip.begin()
 
@@ -35,11 +34,20 @@ class LEDMatrix:
     def turn_off(self):
         self.pixels.fill((0, 0, 0))
 
-    def display_detection(self, x: Union[float, None]):
+    def colorWipe(self, wait_ms=50):
+        """Wipe color across display a pixel at a time."""
+        for i in range(self.strip.numPixels()):
+            self.strip.setPixelColorRGB(i, 0, 0, 0)
+            self.strip.show()
+            time.sleep(wait_ms / 1000.0)
 
-        for i in range(0, self.strip.numPixels()):
-            if i == int(x * self.strip.numPixels()):
-                self.strip.setPixelColorRGB(i, 128, 128, 128)
-            else:
-                self.strip.setPixelColorRGB(i, 0, 0, 0)
+    def display_detection(self, x: Union[float, None]):
+        if x is not None:
+            for i in range(self.strip.numPixels()):
+                if i == int(x * self.strip.numPixels()):
+                    self.strip.setPixelColorRGB(i, 0, 255, 0)
+                else:
+                    self.strip.setPixelColorRGB(i, 255, 0, 0)
+        else:
+            self.colorWipe()
         self.strip.show()

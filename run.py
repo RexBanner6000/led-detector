@@ -36,7 +36,7 @@ parser.add_argument(
 parser.add_argument(
     "--n_leds",
     help="Number of leds",
-    default=32,
+    default=100,
     type=int
 )
 parser.add_argument(
